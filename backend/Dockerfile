@@ -1,4 +1,42 @@
-FROM node:20-alpine AS base
+FROM node:20-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm install
+
+COPY . .
+
+RUN npx prisma generate
+
+RUN npm run build
+
+EXPOSE 10000
+
+CMD ["node", "dist/main.js"]# Base image
+FROM node:20-alpine
+
+# Set working directory
+WORKDIR /app
+
+# Install dependencies
+COPY package*.json ./
+RUN npm install
+
+# Copy project files
+COPY . .
+
+# Generate Prisma client
+RUN npx prisma generate
+
+# Build app
+RUN npm run build
+
+# Expose port
+EXPOSE 10000
+
+# Start app
+CMD ["node", "dist/main.js"]FROM node:20-alpine AS base
 WORKDIR /app
 RUN apk add --no-cache openssl curl
 
