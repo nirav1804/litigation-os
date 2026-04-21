@@ -1,0 +1,534 @@
+// Litigation OS - Complete Prisma Schema
+// PostgreSQL database with full relational model
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── ENUMS ───────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  ADMIN
+  SENIOR_LAWYER
+  ASSOCIATE
+  CLERK
+  CLIENT
+}
+
+enum MatterStatus {
+  ACTIVE
+  PENDING
+  CLOSED
+  ARCHIVED
+  ON_HOLD
+}
+
+enum MatterType {
+  CIVIL
+  CRIMINAL
+  CONSTITUTIONAL
+  TAX
+  INTELLECTUAL_PROPERTY
+  ARBITRATION
+  FAMILY
+  CORPORATE
+  LABOUR
+  CONSUMER
+  OTHER
+}
+
+enum DocumentStatus {
+  UPLOADING
+  PROCESSING
+  PROCESSED
+  FAILED
+}
+
+enum DocumentType {
+  PETITION
+  AFFIDAVIT
+  WRITTEN_SUBMISSION
+  ORDER
+  JUDGMENT
+  NOTICE
+  REPLY
+  REJOINDER
+  EVIDENCE
+  CONTRACT
+  POWER_OF_ATTORNEY
+  VAKALATNAMA
+  OTHER
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  BLOCKED
+  DONE
+  CANCELLED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum HearingStatus {
+  SCHEDULED
+  ADJOURNED
+  COMPLETED
+  CANCELLED
+}
+
+enum HearingOutcome {
+  ARGUMENTS_HEARD
+  ADJOURNED
+  ORDER_PASSED
+  JUDGMENT_RESERVED
+  JUDGMENT_PRONOUNCED
+  DISMISSED
+  SETTLED
+}
+
+enum PartyType {
+  PETITIONER
+  RESPONDENT
+  APPELLANT
+  DEFENDANT
+  PLAINTIFF
+  INTERVENER
+  OTHER
+}
+
+enum AIOutputType {
+  SUMMARY
+  CHRONOLOGY
+  DRAFT_AFFIDAVIT
+  DRAFT_SUBMISSION
+  DRAFT_ADJOURNMENT
+  DRAFT_SYNOPSIS
+  RESEARCH
+  HEARING_PREP
+  EXTRACTION
+}
+
+// ─── CORE MODELS ─────────────────────────────────────────────────────────────
+
+model Organization {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  logoUrl     String?
+  website     String?
+  phone       String?
+  address     String?
+  barCouncil  String?  // Bar Council registration
+  gstin       String?  // GST number
+  plan        String   @default("starter") // starter | professional | enterprise
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users       User[]
+  matters     Matter[]
+  courts      Court[]
+  clients     ClientProfile[]
+
+  @@map("organizations")
+}
+
+model User {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  password       String
+  firstName      String
+  lastName       String
+  role           UserRole  @default(ASSOCIATE)
+  phone          String?
+  avatarUrl      String?
+  barNumber      String?   // Bar Council enrollment number
+  isActive       Boolean   @default(true)
+  emailVerified  Boolean   @default(false)
+  lastLoginAt    DateTime?
+  passwordResetToken  String?
+  passwordResetExpiry DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  clientProfile  ClientProfile?
+
+  assignedMatters MatterAssignment[]
+  createdMatters  Matter[]           @relation("MatterCreator")
+  tasks           Task[]             @relation("TaskAssignee")
+  createdTasks    Task[]             @relation("TaskCreator")
+  hearingNotes    HearingNote[]
+  uploadedDocs    Document[]
+  aiOutputs       AIOutput[]
+  auditLogs       AuditLog[]
+  timelineEvents  TimelineEvent[]
+
+  @@map("users")
+}
+
+model ClientProfile {
+  id             String  @id @default(cuid())
+  userId         String  @unique
+  user           User    @relation(fields: [userId], references: [id])
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  
+  // Client-specific fields
+  panNumber      String?
+  aadhaarLast4   String?
+  address        String?
+  occupation     String?
+  notes          String?
+
+  matters        MatterClient[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("client_profiles")
+}
+
+model Court {
+  id             String  @id @default(cuid())
+  name           String
+  shortName      String?
+  city           String
+  state          String
+  courtType      String  // High Court, District Court, Supreme Court, Tribunal, etc.
+  benchType      String? // Division Bench, Single Bench, Full Bench
+  causeListUrl   String?
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  matters        Matter[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("courts")
+}
+
+model Matter {
+  id             String       @id @default(cuid())
+  title          String
+  caseNumber     String?      // Court-assigned case number
+  internalRef    String?      // Internal reference number
+  status         MatterStatus @default(ACTIVE)
+  type           MatterType   @default(CIVIL)
+  description    String?
+  subject        String?
+  reliefSought   String?
+  
+  // Court details
+  courtId        String?
+  court          Court?       @relation(fields: [courtId], references: [id])
+  judgeName      String?
+  benchNumber    String?
+  filingDate     DateTime?
+  nextHearingDate DateTime?
+
+  // Financial
+  estimatedValue Decimal?
+  fees           Decimal?
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  createdById    String
+  createdBy      User         @relation("MatterCreator", fields: [createdById], references: [id])
+  
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  // Relations
+  parties        Party[]
+  assignments    MatterAssignment[]
+  clients        MatterClient[]
+  documents      Document[]
+  hearings       Hearing[]
+  tasks          Task[]
+  notes          Note[]
+  aiOutputs      AIOutput[]
+  timelineEvents TimelineEvent[]
+  citations      Citation[]
+
+  @@map("matters")
+}
+
+model MatterAssignment {
+  id       String @id @default(cuid())
+  matterId String
+  matter   Matter @relation(fields: [matterId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User   @relation(fields: [userId], references: [id])
+  role     String // lead, supporting, reviewing
+  
+  assignedAt DateTime @default(now())
+
+  @@unique([matterId, userId])
+  @@map("matter_assignments")
+}
+
+model MatterClient {
+  id              String        @id @default(cuid())
+  matterId        String
+  matter          Matter        @relation(fields: [matterId], references: [id], onDelete: Cascade)
+  clientProfileId String
+  clientProfile   ClientProfile @relation(fields: [clientProfileId], references: [id])
+  partyType       PartyType     @default(PETITIONER)
+  
+  assignedAt DateTime @default(now())
+
+  @@unique([matterId, clientProfileId])
+  @@map("matter_clients")
+}
+
+model Party {
+  id          String    @id @default(cuid())
+  matterId    String
+  matter      Matter    @relation(fields: [matterId], references: [id], onDelete: Cascade)
+  name        String
+  type        PartyType
+  address     String?
+  phone       String?
+  email       String?
+  counsel     String?   // Advocate name for opposing party
+  pan         String?
+  description String?
+  isOrganization Boolean @default(false)
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("parties")
+}
+
+model Document {
+  id             String         @id @default(cuid())
+  matterId       String
+  matter         Matter         @relation(fields: [matterId], references: [id], onDelete: Cascade)
+  uploadedById   String
+  uploadedBy     User           @relation(fields: [uploadedById], references: [id])
+
+  name           String
+  originalName   String
+  mimeType       String
+  size           Int            // in bytes
+  s3Key          String         // S3 object key
+  s3Bucket       String
+  
+  status         DocumentStatus @default(UPLOADING)
+  documentType   DocumentType   @default(OTHER)
+  
+  // OCR & Extraction
+  ocrText        String?        @db.Text
+  ocrConfidence  Float?
+  
+  // AI Extraction
+  extractedParties   Json?      // [{name, role, ...}]
+  extractedDates     Json?      // [{date, context, ...}]
+  extractedSections  Json?      // [{section, content, ...}]
+  extractedMetadata  Json?      // any other extracted data
+  
+  // Versioning
+  version        Int            @default(1)
+  parentDocId    String?        // null for v1, points to original for versions
+  
+  description    String?
+  tags           String[]
+  
+  // Vector embedding status
+  isEmbedded     Boolean        @default(false)
+  embeddingIds   String[]       // IDs in vector DB
+  
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  aiOutputs      AIOutput[]     @relation("DocumentAIOutputs")
+  citations      Citation[]
+
+  @@map("documents")
+}
+
+model Hearing {
+  id           String         @id @default(cuid())
+  matterId     String
+  matter       Matter         @relation(fields: [matterId], references: [id], onDelete: Cascade)
+  
+  scheduledAt  DateTime
+  courtRoom    String?
+  status       HearingStatus  @default(SCHEDULED)
+  outcome      HearingOutcome?
+  
+  purpose      String?        // Arguments, Evidence, Cross-examination, etc.
+  adjournedTo  DateTime?
+  adjournedReason String?
+  
+  orderPassed  String?        @db.Text
+  summary      String?        @db.Text
+  
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  notes        HearingNote[]
+  tasks        Task[]         // Tasks created from this hearing
+
+  @@map("hearings")
+}
+
+model HearingNote {
+  id        String   @id @default(cuid())
+  hearingId String
+  hearing   Hearing  @relation(fields: [hearingId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  content   String   @db.Text
+  isPrivate Boolean  @default(false)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("hearing_notes")
+}
+
+model Task {
+  id          String       @id @default(cuid())
+  matterId    String
+  matter      Matter       @relation(fields: [matterId], references: [id], onDelete: Cascade)
+  hearingId   String?      // optionally linked to a hearing
+  hearing     Hearing?     @relation(fields: [hearingId], references: [id])
+  
+  title       String
+  description String?      @db.Text
+  status      TaskStatus   @default(TODO)
+  priority    TaskPriority @default(MEDIUM)
+  
+  dueDate     DateTime?
+  
+  assigneeId  String?
+  assignee    User?        @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  createdById String
+  createdBy   User         @relation("TaskCreator", fields: [createdById], references: [id])
+  
+  completedAt DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@map("tasks")
+}
+
+model Note {
+  id       String  @id @default(cuid())
+  matterId String
+  matter   Matter  @relation(fields: [matterId], references: [id], onDelete: Cascade)
+  content  String  @db.Text
+  isPrivate Boolean @default(false)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("notes")
+}
+
+model AIOutput {
+  id           String       @id @default(cuid())
+  matterId     String
+  matter       Matter       @relation(fields: [matterId], references: [id], onDelete: Cascade)
+  generatedById String
+  generatedBy  User         @relation(fields: [generatedById], references: [id])
+  
+  type         AIOutputType
+  prompt       String       @db.Text
+  output       String       @db.Text
+  model        String       // e.g. gpt-4, claude-3-opus
+  tokens       Int?         // tokens used
+  
+  // Source documents used
+  sourceDocuments Document[] @relation("DocumentAIOutputs")
+  citations    Citation[]
+  
+  isSaved      Boolean      @default(false)
+  title        String?      // user-given title when saved
+  
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@map("ai_outputs")
+}
+
+model Citation {
+  id           String    @id @default(cuid())
+  matterId     String
+  matter       Matter    @relation(fields: [matterId], references: [id], onDelete: Cascade)
+  documentId   String?
+  document     Document? @relation(fields: [documentId], references: [id])
+  aiOutputId   String?
+  aiOutput     AIOutput? @relation(fields: [aiOutputId], references: [id])
+  
+  caseName     String
+  citation     String    // e.g. AIR 2023 SC 1234
+  court        String?
+  year         Int?
+  relevance    String?
+  url          String?
+  excerpt      String?   @db.Text
+  
+  createdAt    DateTime  @default(now())
+
+  @@map("citations")
+}
+
+model TimelineEvent {
+  id          String   @id @default(cuid())
+  matterId    String
+  matter      Matter   @relation(fields: [matterId], references: [id], onDelete: Cascade)
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  
+  eventDate   DateTime
+  title       String
+  description String?  @db.Text
+  eventType   String   // filing, hearing, order, task, document, note, system
+  metadata    Json?    // flexible additional data
+  
+  createdAt   DateTime @default(now())
+
+  @@map("timeline_events")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  
+  action     String   // CREATE, UPDATE, DELETE, VIEW, DOWNLOAD, LOGIN, etc.
+  entity     String   // Matter, Document, User, etc.
+  entityId   String?
+  changes    Json?    // before/after for updates
+  ipAddress  String?
+  userAgent  String?
+  
+  createdAt  DateTime @default(now())
+
+  @@map("audit_logs")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("refresh_tokens")
+}
