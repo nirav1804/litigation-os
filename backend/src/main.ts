@@ -3,53 +3,41 @@ import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import helmet from 'helmet';
 import * as compression from 'compression';
+
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
-    logger: ['error', 'warn', 'log', 'debug'],
-  });
+  const app = await NestFactory.create(AppModule);
 
   const configService = app.get(ConfigService);
-  const port = configService.get<number>('PORT', 3001);
-  const frontendUrl = configService.get<string>('FRONTEND_URL', 'http://localhost:3000');
 
-  // Security
-  app.use(helmet({
-    crossOriginEmbedderPolicy: false,
-    contentSecurityPolicy: false,
-  }));
+  app.use(helmet());
   app.use(compression());
 
-  // CORS
-  app.enableCors({
-    origin: [frontendUrl],
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-organization-id'],
-  });
-
-  // Global prefix
   app.setGlobalPrefix('api/v1');
 
-  // Validation
+  app.enableCors({
+    origin: configService.get<string>('FRONTEND_URL') || '*',
+    credentials: true,
+  });
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
       transform: true,
       forbidNonWhitelisted: true,
-      transformOptions: { enableImplicitConversion: true },
     }),
   );
 
-  // Filters and interceptors
-  app.useGlobalFilters(new HttpExceptionFilter());
   app.useGlobalInterceptors(new TransformInterceptor());
+  app.useGlobalFilters(new HttpExceptionFilter());
+
+  const port = configService.get<number>('PORT') || 10000;
 
   await app.listen(port);
-  console.log(`🏛️  Litigation OS Backend running on: http://localhost:${port}/api/v1`);
+  console.log(`Server running on port ${port}`);
 }
 
 bootstrap();
