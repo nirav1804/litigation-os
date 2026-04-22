@@ -13,3 +13,4 @@ RUN npm run build
 EXPOSE 10000
 
 CMD ["node", "dist/src/main.js"]
+
