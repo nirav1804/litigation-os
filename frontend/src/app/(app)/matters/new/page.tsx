@@ -13,7 +13,7 @@ export default function NewMatterPage() {
   const router = useRouter()
   const createMatter = useCreateMatter()
   const { data: courtsData } = useCourts()
-  const courts = courtsData?.data ?? []
+  const courts = (courtsData as any)?.data ?? []
 
   const [form, setForm] = useState({
     title: '',

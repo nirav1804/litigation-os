@@ -21,7 +21,7 @@ export default function DashboardPage() {
   const { data: hearings } = useUpcomingHearings(7)
   const { data: myTasks } = useMyTasks({ status: 'TODO' })
 
-  const stats = dashboard?.data
+const stats = (dashboard as any)?.data
 
   const greeting = () => {
     const h = new Date().getHours()
@@ -100,7 +100,7 @@ export default function DashboardPage() {
             </Link>
           </div>
           <div className="space-y-3">
-            {hearings?.data?.slice(0, 5).map((h: any) => (
+            {(hearings as any)?.data?.slice(0, 5).map((h: any) => (
               <Link
                 key={h.id}
                 href={`/matters/${h.matter.id}?tab=hearings`}
@@ -126,7 +126,7 @@ export default function DashboardPage() {
                 </div>
               </Link>
             ))}
-            {(!hearings?.data?.length) && (
+            {(!(hearings as any)?.data?.length) && (
               <p className="text-sm text-muted-foreground text-center py-4">
                 No upcoming hearings
               </p>
@@ -189,7 +189,7 @@ export default function DashboardPage() {
             </Link>
           </div>
           <div className="space-y-2">
-            {myTasks?.data?.slice(0, 6).map((t: any) => (
+            {(myTasks as any)?.data?.slice(0, 6).map((t: any) => (
               <div key={t.id} className="flex items-start gap-2.5 p-2 rounded-lg hover:bg-accent transition">
                 <div className={cn(
                   'w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0',
@@ -211,7 +211,7 @@ export default function DashboardPage() {
                 )}
               </div>
             ))}
-            {(!myTasks?.data?.length) && (
+            {(!(myTasks as any)?.data?.length) && (
               <p className="text-sm text-muted-foreground text-center py-4">
                 All caught up! 🎉
               </p>

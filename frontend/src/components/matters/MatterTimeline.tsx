@@ -26,7 +26,7 @@ const EVENT_COLORS: Record<string, string> = {
 
 export function MatterTimeline({ matterId }: { matterId: string }) {
   const { data, isLoading } = useMatterTimeline(matterId)
-  const events = data?.data ?? []
+  const events = (data as any)?.data ?? []
 
   return (
     <div className="space-y-2">

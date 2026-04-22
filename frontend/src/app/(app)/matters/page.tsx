@@ -25,8 +25,8 @@ export default function MattersPage() {
     assignedToMe,
   })
 
-  const matters = data?.data?.data ?? []
-  const pagination = data?.data
+const matters = (data as any)?.data?.data ?? []
+const pagination = (data as any)?.data
 
   return (
     <div className="space-y-5">

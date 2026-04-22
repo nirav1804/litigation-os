@@ -30,8 +30,8 @@ export function MatterTasks({ matterId }: { matterId: string }) {
     assigneeId: '',
   })
 
-  const tasks = data?.data ?? []
-  const users = usersData?.data ?? []
+  const tasks = (data as any)?.data ?? []
+  const users = (usersData as any)?.data ?? []
   const filtered = filterStatus ? tasks.filter((t: any) => t.status === filterStatus) : tasks
 
   const handleCreate = async () => {

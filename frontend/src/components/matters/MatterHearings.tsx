@@ -28,7 +28,7 @@ export function MatterHearings({ matterId }: { matterId: string }) {
     purpose: '',
   })
 
-  const hearings = data?.data ?? []
+  const hearings = (data as any)?.data ?? []
 
   const handleCreate = async () => {
     if (!form.scheduledAt) return toast.error('Please select a date')
@@ -39,7 +39,7 @@ export function MatterHearings({ matterId }: { matterId: string }) {
 
   const handlePrepare = async (hearingId: string) => {
     const res = await hearingPrepMutation.mutateAsync(hearingId)
-    setPrepResult(prev => ({ ...prev, [hearingId]: res.data?.output || '' }))
+    setPrepResult(prev => ({ ...prev, [hearingId]: (res as any)?.data?.output || '' }))
     toast.success('Hearing brief generated')
   }
 

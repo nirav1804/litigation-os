@@ -27,8 +27,8 @@ export function MatterOverview({ matter }: { matter: any }) {
   const updateMatter = useUpdateMatter(matter.id)
   const { data: usersData } = useUsers()
   const { data: courtsData } = useCourts()
-  const users = usersData?.data ?? []
-  const courts = courtsData?.data ?? []
+  const users = (usersData as any)?.data ?? []
+  const courts = (courtsData as any)?.data ?? []
 
   const handleSave = async () => {
     await updateMatter.mutateAsync(form)

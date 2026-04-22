@@ -1,0 +1,21 @@
+{
+  "/_not-found": "app/_not-found.js",
+  "/auth/login/page": "app/auth/login/page.js",
+  "/auth/register/page": "app/auth/register/page.js",
+  "/page": "app/page.js",
+  "/(app)/clients/page": "app/(app)/clients/page.js",
+  "/(app)/analytics/page": "app/(app)/analytics/page.js",
+  "/(app)/dashboard/page": "app/(app)/dashboard/page.js",
+  "/(app)/documents/[id]/page": "app/(app)/documents/[id]/page.js",
+  "/(app)/ai/draft/page": "app/(app)/ai/draft/page.js",
+  "/(app)/documents/page": "app/(app)/documents/page.js",
+  "/(app)/hearings/page": "app/(app)/hearings/page.js",
+  "/(app)/matters/[id]/page": "app/(app)/matters/[id]/page.js",
+  "/(app)/matters/new/page": "app/(app)/matters/new/page.js",
+  "/(app)/matters/page": "app/(app)/matters/page.js",
+  "/(app)/settings/page": "app/(app)/settings/page.js",
+  "/(app)/tasks/page": "app/(app)/tasks/page.js",
+  "/(app)/admin/page": "app/(app)/admin/page.js",
+  "/(app)/ai/research/page": "app/(app)/ai/research/page.js",
+  "/(app)/ai/page": "app/(app)/ai/page.js"
+}

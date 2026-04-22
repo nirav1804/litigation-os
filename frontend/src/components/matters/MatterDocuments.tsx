@@ -20,7 +20,7 @@ export function MatterDocuments({ matterId }: { matterId: string }) {
   const [docType, setDocType] = useState('OTHER')
   const [description, setDescription] = useState('')
 
-  const docs = data?.data ?? []
+  const docs = (data as any)?.data ?? []
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     for (const file of acceptedFiles) {
